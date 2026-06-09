@@ -6,8 +6,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class FcMembershipApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(FcMembershipApplication.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(FcMembershipApplication.class, args);
+    }
 
 }

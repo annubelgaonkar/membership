@@ -1,4 +1,7 @@
 package dev.anuradha.fcmembership.enums;
 
-public class PlanDuration {
+public enum PlanDuration {
+    MONTHLY,
+    QUARTERLY,
+    YEARLY
 }

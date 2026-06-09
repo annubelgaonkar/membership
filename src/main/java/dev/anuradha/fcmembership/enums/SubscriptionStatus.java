@@ -1,4 +1,7 @@
 package dev.anuradha.fcmembership.enums;
 
-public class SubscriptionStatus {
+public enum SubscriptionStatus {
+    ACTIVE,
+    CANCELLED,
+    EXPIRED
 }
