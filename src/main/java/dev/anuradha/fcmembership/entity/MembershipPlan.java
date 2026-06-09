@@ -44,8 +44,4 @@ public class MembershipPlan extends BaseEntity{
     @Builder.Default
     private List<MembershipTier> tiers = new ArrayList<>();
 
-
-
-
-
 }

@@ -1,0 +1,23 @@
+package dev.anuradha.fcmembership.dto.response;
+
+import dev.anuradha.fcmembership.enums.SubscriptionStatus;
+import lombok.Builder;
+import lombok.Data;
+
+import java.time.LocalDateTime;
+
+@Data
+@Builder
+public class SubscriptionResponse {
+
+    private Long subscriptionId;
+    private Long userId;
+    private String userName;
+    private PlanResponse plan;
+    private TierResponse tier;
+    private SubscriptionStatus status;
+    private LocalDateTime startDate;
+    private LocalDateTime expiryDate;
+    private LocalDateTime cancelledAt;
+    private long daysRemaining;
+}
