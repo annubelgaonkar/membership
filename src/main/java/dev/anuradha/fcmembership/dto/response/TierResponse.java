@@ -15,7 +15,6 @@ public class TierResponse {
     private String name;
     private String description;
     private Integer tierLevel;
-    private List<BenefitResponse> benefits;
     private List<CriteriaResponse> criteria;
 
 }

@@ -14,5 +14,4 @@ public interface MembershipPlanRepository extends JpaRepository<MembershipPlan, 
     List<MembershipPlan> findByActiveTrue();
     Optional<MembershipPlan> findByDurationAndActiveTrue(PlanDuration duration);
 
-
 }

@@ -37,11 +37,6 @@ public class MembershipTier extends BaseEntity {
     @JoinColumn(name = "plan_id", nullable = false)
     private MembershipPlan plan;
 
-    // Benefits configured per tier
-    @OneToMany(mappedBy = "tier", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @Builder.Default
-    private List<TierBenefit> benefits = new ArrayList<>();
-
     // Criteria that qualifies a user for this tier
     @OneToMany(mappedBy = "tier", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @Builder.Default

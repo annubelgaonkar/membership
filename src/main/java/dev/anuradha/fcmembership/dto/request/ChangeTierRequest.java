@@ -12,5 +12,4 @@ public class ChangeTierRequest {
     @NotNull(message = "New Tier Id is required")
     private Long newTierId;
 
-
 }

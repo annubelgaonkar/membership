@@ -13,6 +13,7 @@ import java.util.Optional;
 @Repository
 public interface UserSubscriptionRepository extends JpaRepository<UserSubscription, Long> {
 
+    //find Active subscription for a user
     Optional<UserSubscription> findByUserIdAndStatus(Long userId, SubscriptionStatus status);
 
     // To check if user already has any active/non-expired subscription
@@ -25,5 +26,4 @@ public interface UserSubscriptionRepository extends JpaRepository<UserSubscripti
     // For expiry jobs (future extensibility)
     @Query("SELECT s FROM UserSubscription s WHERE s.status = 'ACTIVE' AND s.expiryDate < :now")
     List<UserSubscription> findExpiredSubscriptions(LocalDateTime now);
-
 }

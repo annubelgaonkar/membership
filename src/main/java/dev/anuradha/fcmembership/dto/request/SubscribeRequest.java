@@ -14,5 +14,4 @@ public class SubscribeRequest {
 
     @NotNull(message = "Tier ID is required")
     private Long tierId;
-
 }

@@ -11,6 +11,7 @@ import java.util.Optional;
 
 @Repository
 public interface MembershipTierRepository extends JpaRepository<MembershipTier, Long> {
+
     List<MembershipTier> findByPlanIdAndActiveTrueOrderByTierLevelAsc(Long planId);
 
     Optional<MembershipTier> findByPlanIdAndTierType(Long planId, TierType tierType);
@@ -18,6 +19,4 @@ public interface MembershipTierRepository extends JpaRepository<MembershipTier, 
     // Fetch tiers with their criteria eagerly — used by tier evaluation engine
     @Query("SELECT t FROM MembershipTier t LEFT JOIN FETCH t.criteriaList WHERE t.plan.id = :planId AND t.active = true ORDER BY t.tierLevel DESC")
     List<MembershipTier> findTiersWithCriteriaByPlanId(Long planId);
-
-
 }

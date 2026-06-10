@@ -10,8 +10,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "membership_plans")
-@Getter
-@Setter
+@Getter @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
@@ -26,7 +25,7 @@ public class MembershipPlan extends BaseEntity{
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private PlanDuration  duration;
+    private PlanDuration  duration;         //monthly, quarterly, yearly etc
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal price;           //for eg : 99.00, 199.00, 249.00

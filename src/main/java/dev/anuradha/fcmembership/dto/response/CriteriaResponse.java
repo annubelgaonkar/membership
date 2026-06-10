@@ -9,7 +9,6 @@ import java.math.BigDecimal;
 @Data
 @Builder
 public class CriteriaResponse {
-
     private Long id;
     private CriteriaType criteriaType;
     private Integer minOrderCount;

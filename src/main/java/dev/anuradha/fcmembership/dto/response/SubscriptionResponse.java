@@ -9,7 +9,6 @@ import java.time.LocalDateTime;
 @Data
 @Builder
 public class SubscriptionResponse {
-
     private Long subscriptionId;
     private Long userId;
     private String userName;
