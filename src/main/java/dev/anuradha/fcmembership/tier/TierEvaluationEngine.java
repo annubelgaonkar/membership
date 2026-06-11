@@ -1,10 +1,11 @@
-package dev.anuradha.fcmembership.tier.criteria;
+package dev.anuradha.fcmembership.tier;
 
 import dev.anuradha.fcmembership.entity.MembershipTier;
 import dev.anuradha.fcmembership.entity.TierCriteria;
 import dev.anuradha.fcmembership.entity.User;
 import dev.anuradha.fcmembership.enums.CriteriaType;
 import dev.anuradha.fcmembership.repository.MembershipTierRepository;
+import dev.anuradha.fcmembership.tier.criteria.TierCriteriaEvaluator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 

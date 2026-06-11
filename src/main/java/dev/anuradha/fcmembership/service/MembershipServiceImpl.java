@@ -17,7 +17,7 @@ import dev.anuradha.fcmembership.repository.MembershipPlanRepository;
 import dev.anuradha.fcmembership.repository.MembershipTierRepository;
 import dev.anuradha.fcmembership.repository.UserRepository;
 import dev.anuradha.fcmembership.repository.UserSubscriptionRepository;
-import dev.anuradha.fcmembership.tier.criteria.TierEvaluationEngine;
+import dev.anuradha.fcmembership.tier.TierEvaluationEngine;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,7 +59,9 @@ public class MembershipServiceImpl implements MembershipService{
             );
         }
 
-        subscriptionRepository.findActiveSubscription(user.getId(), LocalDateTime.now())
+        subscriptionRepository.findByUserIdAndStatusAndExpiryDateAfter(
+                        user.getId(), SubscriptionStatus.ACTIVE, LocalDateTime.now()
+                )
                 .ifPresent(existing -> {
                     throw new SubscriptionException(
                             "User already has an active subscription. Please cancel it before susbcribing to a new plan."
@@ -118,6 +120,7 @@ public class MembershipServiceImpl implements MembershipService{
 
 
     @Override
+    @Transactional
     public SubscriptionResponse cancelSubscription(Long userId) {
 
         UserSubscription subscription = findActiveSubscription(userId);
@@ -137,8 +140,9 @@ public class MembershipServiceImpl implements MembershipService{
     public SubscriptionResponse getSubscription(Long userId) {
         findUserById(userId);
 
-        UserSubscription subscription = subscriptionRepository
-                .findActiveSubscription(userId, LocalDateTime.now())
+        UserSubscription subscription = subscriptionRepository.findByUserIdAndStatusAndExpiryDateAfter(
+                        userId, SubscriptionStatus.ACTIVE, LocalDateTime.now()
+                )
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "No active subscription found for user ID: " + userId
                 ));
@@ -192,8 +196,9 @@ public class MembershipServiceImpl implements MembershipService{
                 ));
     }
     private UserSubscription findActiveSubscription(Long userId) {
-        return subscriptionRepository
-                .findActiveSubscription(userId, LocalDateTime.now())
+        return subscriptionRepository.findByUserIdAndStatusAndExpiryDateAfter(
+                        userId, SubscriptionStatus.ACTIVE, LocalDateTime.now()
+                )
                 .orElseThrow(() -> new SubscriptionException(
                         "No active subscription found for user ID: " + userId
                 ));
