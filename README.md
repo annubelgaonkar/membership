@@ -112,6 +112,18 @@ All endpoints return a consistent `ApiResponse<T>` wrapper:
 - Maven 3.8+
 
 ### Start
+
+**Mac / Linux**
+```bash
+./mvnw spring-boot:run
+```
+
+**Windows**
+```cmd
+mvnw.cmd spring-boot:run
+```
+
+**Using Maven directly (any OS)**
 ```bash
 mvn spring-boot:run
 ```
@@ -167,15 +179,14 @@ Subscribe a user to a plan. The system automatically assigns the best tier the u
 
 **Tier Assignment Logic**
 ```
-Rahul  (orderValue=₹3500, Monthly) → Platinum (meets ₹3000 threshold)
-Priya  (cohort=PREMIUM_INVITE, Quarterly) → Platinum (cohort match)
-Amit   (orderValue=₹200, Monthly) → Silver (default, no criteria met)
+All users start at Silver on subscription regardless of order history.
+Use PUT /evaluate-tier/{userId} to upgrade based on criteria.
 ```
 
 ---
 
-### PUT `/tier`
-Upgrade or downgrade tier within the same plan.
+### PUT `/tier` *(Admin/Support)*
+Manual tier override for customer support and admin use cases. Bypasses criteria validation intentionally — use `PUT /evaluate-tier/{userId}` for criteria-based upgrades.
 
 **Request**
 ```json
@@ -186,37 +197,127 @@ Upgrade or downgrade tier within the same plan.
 - New tier must belong to the user's current plan
 - Cannot change to the same tier
 
+**Response**
+```json
+{
+  "success": true,
+  "message": "Tier changed successfully",
+  "data": {
+    "tier": { "name": "Gold", "tierType": "GOLD" },
+    "tierChange": "Platinum → Gold",
+    ...
+  }
+}
+```
+
 ---
 
 ### PUT `/cancel/{userId}`
 Cancel an active subscription.
+
+**Example**
+```
+PUT /api/v1/membership/cancel/1
+```
+
+**Validations**
+- User must have an active subscription
+
+**Response**
+```json
+{
+  "success": true,
+  "message": "Subscription cancelled successfully",
+  "data": {
+    "subscriptionId": 1,
+    "status": "CANCELLED",
+    "cancelledAt": "2026-06-11T19:50:00",
+    ...
+  }
+}
+```
 
 ---
 
 ### GET `/status/{userId}`
 Get current active subscription with days remaining.
 
+**Example**
+```
+GET /api/v1/membership/status/1
+```
+
+**Validations**
+- User must exist
+- User must have an active subscription
+
+**Response**
+```json
+{
+  "success": true,
+  "data": {
+    "subscriptionId": 1,
+    "planName": "Monthly Membership",
+    "tier": { "name": "Platinum", "tierType": "PLATINUM" },
+    "status": "ACTIVE",
+    "startDate": "2026-06-11T09:00:00",
+    "expiryDate": "2026-07-11T09:00:00",
+    "daysRemaining": 29
+  }
+}
+```
+
 ---
 
 ### PUT `/evaluate-tier/{userId}`
-Re-evaluates and auto-assigns the best tier the user currently qualifies for. Use this when a user's order activity changes after subscription.
+Re-evaluates and auto-assigns the best tier the user currently qualifies for based on their order history and cohort. Use this when a user's order activity changes after subscription.
+
+**Example**
+```
+PUT /api/v1/membership/evaluate-tier/1
+```
+
+**Validations**
+- User must have an active subscription
+
+**Tier Evaluation Logic**
+```
+Rahul  (orderValue=₹3500) → Silver → Platinum  (tierChange: "Silver → Platinum")
+Priya  (cohort=PREMIUM_INVITE) → Silver → Platinum  (tierChange: "Silver → Platinum")
+Amit   (orderValue=₹200)  → stays Silver  (tierChange: "No change — already on Silver")
+```
+
+**Response**
+```json
+{
+  "success": true,
+  "message": "Tier evaluated successfully",
+  "data": {
+    "tier": { "name": "Platinum", "tierType": "PLATINUM" },
+    "tierChange": "Silver → Platinum",
+    ...
+  }
+}
+```
 
 ---
 
 ## Demo Flow
 
 ```
-1. GET  /plans                       → browse available plans
-2. POST /subscribe { userId:1, planId:1 }  → Rahul auto-assigned Platinum
-3. POST /subscribe { userId:2, planId:2 }  → Priya auto-assigned Platinum (cohort)
-4. POST /subscribe { userId:3, planId:1 }  → Amit defaulted to Silver
-5. POST /subscribe (Rahul again)     → 400 — already subscribed
-6. GET  /status/1                    → active, 30 days remaining
-7. PUT  /tier { newTierId: 2 }       → manually downgrade to Gold
-8. PUT  /tier { newTierId: 4 }       → 400 — tier from different plan
-9. PUT  /evaluate-tier/1             → engine re-assigns Platinum
-10. PUT /cancel/1                    → subscription cancelled
-11. GET /status/1                    → 404 — no active subscription
+1.  GET  /plans                            → browse available plans
+2.  POST /subscribe { userId:1, planId:1 } → Rahul subscribed, assigned Silver
+3.  POST /subscribe { userId:2, planId:2 } → Priya subscribed, assigned Silver
+4.  POST /subscribe { userId:3, planId:1 } → Amit subscribed, assigned Silver
+5.  POST /subscribe (Rahul again)          → 400 — already subscribed
+6.  GET  /status/1                         → active, 30 days remaining
+7.  PUT  /evaluate-tier/1                  → Rahul upgraded Silver → Platinum
+8.  PUT  /evaluate-tier/2                  → Priya upgraded Silver → Platinum (cohort)
+9.  PUT  /evaluate-tier/3                  → Amit stays Silver, no criteria met
+10. PUT  /tier { userId:1, newTierId:2 }   → admin manually changes Rahul to Gold
+11. PUT  /tier { userId:1, newTierId:4 }   → 400 — tier from different plan
+12. PUT  /cancel/1                         → subscription cancelled
+13. GET  /status/1                         → 404 — no active subscription
 ```
 
 ---
