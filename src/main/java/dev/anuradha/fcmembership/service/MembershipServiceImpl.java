@@ -140,6 +140,7 @@ public class MembershipServiceImpl implements MembershipService{
 
     //get subscription status
     @Override
+    @Transactional
     public SubscriptionResponse getSubscription(Long userId) {
         findUserById(userId);
 
