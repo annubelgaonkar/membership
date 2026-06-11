@@ -1,4 +1,4 @@
-# FC Membership — FirstClub Membership Program
+# FirstClub Membership
 
 A backend system for a subscription-based membership program with tiered benefits, built with Spring Boot. Designed for extensibility, clean abstractions, and concurrent safety.
 
@@ -6,14 +6,14 @@ A backend system for a subscription-based membership program with tiered benefit
 
 ## Tech Stack
 
-| Layer | Technology                  |
-|---|-----------------------------|
-| Language | Java 17                     |
-| Framework | Spring Boot 4.0.6           |
+| Layer | Technology |
+|---|---|
+| Language | Java 17 |
+| Framework | Spring Boot 4.0.6 |
 | Persistence | Spring Data JPA + Hibernate |
-| Database | H2 (in-memory, zero setup)  |
-| Build Tool | Maven                       |
-| Utilities | Lombok, Jakarta Validation  |
+| Database | H2 (in-memory, zero setup) |
+| Build Tool | Maven |
+| Utilities | Lombok, Jakarta Validation |
 
 ---
 
@@ -77,13 +77,23 @@ TierCriteriaEvaluator (interface)
 
 Adding a new criteria type requires **zero changes** to existing code — just add a new evaluator class.
 
-### 2. Concurrency — Optimistic Locking
+### 2. Auto Tier Assignment on Subscribe
+When a user subscribes to a plan, the system automatically assigns the best tier they qualify for based on their order history and cohort — users cannot manually pick a tier. If a user doesn't qualify for any tier, they are defaulted to Silver so anyone can subscribe.
+
+```
+User subscribes to Monthly Plan
+    → TierEvaluationEngine evaluates criteria (highest tier first)
+    → Assigns best qualifying tier
+    → Defaults to Silver if no criteria met
+```
+
+### 3. Concurrency — Optimistic Locking
 `UserSubscription` uses `@Version` (JPA optimistic locking). If two concurrent requests try to modify the same subscription (e.g. simultaneous upgrade + cancel), one will succeed and the other will receive a `409 Conflict` response — no silent data corruption.
 
-### 3. Configurable Tiers
+### 4. Configurable Tiers
 Tier criteria are stored as DB rows, not hardcoded logic. Thresholds (order count, order value, cohort name) can be updated in the DB without any code change.
 
-### 4. Uniform API Response
+### 5. Uniform API Response
 All endpoints return a consistent `ApiResponse<T>` wrapper:
 ```json
 // Success
@@ -143,16 +153,24 @@ Returns all active membership plans with their tiers and criteria.
 ---
 
 ### POST `/subscribe`
-Subscribe a user to a plan and tier.
+Subscribe a user to a plan. The system automatically assigns the best tier the user qualifies for based on their order history and cohort. Defaults to Silver if no criteria are met.
 
 **Request**
 ```json
-{ "userId": 1, "planId": 1, "tierId": 1 }
+{ "userId": 1, "planId": 1 }
 ```
 
 **Validations**
-- Tier must belong to the selected plan
+- User must exist
+- Plan must exist and be active
 - User must not have an existing active subscription
+
+**Tier Assignment Logic**
+```
+Rahul  (orderValue=₹3500, Monthly) → Platinum (meets ₹3000 threshold)
+Priya  (cohort=PREMIUM_INVITE, Quarterly) → Platinum (cohort match)
+Amit   (orderValue=₹200, Monthly) → Silver (default, no criteria met)
+```
 
 ---
 
@@ -181,22 +199,24 @@ Get current active subscription with days remaining.
 ---
 
 ### PUT `/evaluate-tier/{userId}`
-Auto-evaluates and assigns the best tier the user qualifies for based on their order history and cohort, using the criteria engine.
+Re-evaluates and auto-assigns the best tier the user currently qualifies for. Use this when a user's order activity changes after subscription.
 
 ---
 
 ## Demo Flow
 
 ```
-1. GET  /plans                          → browse available plans
-2. POST /subscribe                      → subscribe user 1 to monthly/silver
-3. POST /subscribe (again)              → 400 — already subscribed
-4. GET  /status/1                       → active, 30 days remaining
-5. PUT  /tier       { newTierId: 2 }    → upgrade to Gold
-6. PUT  /tier       { newTierId: 4 }    → 400 — tier from different plan
-7. PUT  /evaluate-tier/1                → engine auto-assigns Platinum
-8. PUT  /cancel/1                       → subscription cancelled
-9. GET  /status/1                       → 404 — no active subscription
+1. GET  /plans                       → browse available plans
+2. POST /subscribe { userId:1, planId:1 }  → Rahul auto-assigned Platinum
+3. POST /subscribe { userId:2, planId:2 }  → Priya auto-assigned Platinum (cohort)
+4. POST /subscribe { userId:3, planId:1 }  → Amit defaulted to Silver
+5. POST /subscribe (Rahul again)     → 400 — already subscribed
+6. GET  /status/1                    → active, 30 days remaining
+7. PUT  /tier { newTierId: 2 }       → manually downgrade to Gold
+8. PUT  /tier { newTierId: 4 }       → 400 — tier from different plan
+9. PUT  /evaluate-tier/1             → engine re-assigns Platinum
+10. PUT /cancel/1                    → subscription cancelled
+11. GET /status/1                    → 404 — no active subscription
 ```
 
 ---

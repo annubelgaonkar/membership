@@ -64,30 +64,26 @@ public class MembershipServiceImpl implements MembershipService{
                     );
                 });
 
-        // Auto-assign best qualifying tier via criteria engine
-        // If user doesn't qualify for any tier → default to Silver
-        MembershipTier assignedTier = tierEvaluationEngine
-                .evaluateBestTier(user, plan.getId())
-                .orElseGet(() -> tierRepository
-                        .findByPlanIdAndTierType(plan.getId(), TierType.SILVER)
-                        .orElseThrow(() -> new ResourceNotFoundException(
-                                "Default Silver tier not found for plan: " + plan.getName()
-                        ))
-                );
+        // Always start at Silver — tier is upgraded later via evaluate-tier
+        MembershipTier silverTier = tierRepository
+                .findByPlanIdAndTierType(plan.getId(), TierType.SILVER)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Silver tier not found for plan: " + plan.getName()
+                ));
 
         LocalDateTime now = LocalDateTime.now();
         UserSubscription subscription = UserSubscription.builder()
                 .user(user)
                 .plan(plan)
-                .tier(assignedTier)
+                .tier(silverTier)
                 .status(SubscriptionStatus.ACTIVE)
                 .startDate(now)
                 .expiryDate(now.plusDays(plan.getDurationInDays()))
                 .build();
 
         UserSubscription saved = subscriptionRepository.save(subscription);
-        log.info("User {} subscribed to plan {} — auto-assigned tier: {}",
-                user.getEmail(), plan.getName(), assignedTier.getName());
+        log.info("User {} subscribed to plan {} — starting tier: Silver",
+                user.getEmail(), plan.getName());
 
         return mapper.toSubscriptionResponse(saved);
     }
@@ -125,9 +121,8 @@ public class MembershipServiceImpl implements MembershipService{
         return mapper.toSubscriptionResponse(saved);
     }
 
+
     //cancellation
-
-
     @Override
     @Transactional
     public SubscriptionResponse cancelSubscription(Long userId) {
@@ -144,7 +139,6 @@ public class MembershipServiceImpl implements MembershipService{
     }
 
     //get subscription status
-
     @Override
     public SubscriptionResponse getSubscription(Long userId) {
         findUserById(userId);
@@ -159,9 +153,8 @@ public class MembershipServiceImpl implements MembershipService{
     }
 
     // ── EVALUATE AND AUTO-ASSIGN BEST TIER
-
-
     @Override
+    @Transactional
     public SubscriptionResponse evaluateAndUpgradeTier(Long userId) {
         UserSubscription subscription = findActiveSubscription(userId);
         User user = subscription.getUser();
