@@ -22,6 +22,7 @@ public class SubscriptionResponse {
     private BigDecimal planPrice;
     //current tier only
     private TierResponse tier;
+    private String tierChange;
     private SubscriptionStatus status;
     private LocalDateTime startDate;
     private LocalDateTime expiryDate;

@@ -37,6 +37,8 @@ public class MembershipController {
                 .body(ApiResponse.success("Subscribed successfully", response));
     }
 
+    // Admin/Support only — manual tier override bypassing criteria validation.
+    // For criteria-based tier assignment, use PUT /evaluate-tier/{userId} API
     @PutMapping("/tier")
     public ResponseEntity<ApiResponse<SubscriptionResponse>> changeTier(
             @Valid @RequestBody ChangeTierRequest request){

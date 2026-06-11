@@ -91,12 +91,12 @@ public class MembershipServiceImpl implements MembershipService{
     //change tier i.e. upgrade/downgrade
     @Override
     @Transactional
-    public SubscriptionResponse changeTier(ChangeTierRequest request){
-        // @Version on UserSubscription handles concurrent modification
+    public SubscriptionResponse changeTier(ChangeTierRequest request) {
+
         UserSubscription subscription = findActiveSubscription(request.getUserId());
         MembershipTier newTier = findTierById(request.getNewTierId());
 
-        if(!newTier.getPlan().getId().equals(subscription.getPlan().getId())){
+        if (!newTier.getPlan().getId().equals(subscription.getPlan().getId())) {
             throw new TierMismatchException(
                     "New tier '" + newTier.getName() + "' does not belong to current plan '"
                             + subscription.getPlan().getName() + "'. To change plan, cancel and re-subscribe."
@@ -105,20 +105,24 @@ public class MembershipServiceImpl implements MembershipService{
 
         MembershipTier currentTier = subscription.getTier();
 
-        if(currentTier.getId().equals(newTier.getId())){
-            throw new SubscriptionException("You are already on the "+currentTier.getName() + " tier");
+        if (currentTier.getId().equals(newTier.getId())) {
+            throw new SubscriptionException("You are already on the " + currentTier.getName() + " tier");
         }
 
         String changeType = newTier.getTierLevel() > currentTier.getTierLevel()
                 ? "upgraded" : "downgraded";
 
+        String tierChange = currentTier.getName() + " → " + newTier.getName();
+
         subscription.setTier(newTier);
         UserSubscription saved = subscriptionRepository.save(subscription);
-        log.info("user {} {} from {} to {}",
-                subscription.getUser().getEmail(),changeType,
+        log.info("User {} {} from {} to {}",
+                subscription.getUser().getEmail(), changeType,
                 currentTier.getName(), newTier.getName());
 
-        return mapper.toSubscriptionResponse(saved);
+        SubscriptionResponse response = mapper.toSubscriptionResponse(saved);
+        response.setTierChange(tierChange);
+        return response;
     }
 
 
@@ -167,16 +171,21 @@ public class MembershipServiceImpl implements MembershipService{
                         "User does not qualify for any tier in the current plan"
                 ));
 
+        SubscriptionResponse response;
         if (bestTier.getId().equals(subscription.getTier().getId())) {
             log.info("User {} already on best qualifying tier: {}", user.getEmail(), bestTier.getName());
+            response = mapper.toSubscriptionResponse(subscription);
+            response.setTierChange("No change — already on " + bestTier.getName());
         } else {
-            log.info("User {} tier evaluated: {} → {}",
-                    user.getEmail(), subscription.getTier().getName(), bestTier.getName());
+            String tierChange = subscription.getTier().getName() + " → " + bestTier.getName();
+            log.info("User {} tier evaluated: {}", user.getEmail(), tierChange);
             subscription.setTier(bestTier);
             subscriptionRepository.save(subscription);
+            response = mapper.toSubscriptionResponse(subscription);
+            response.setTierChange(tierChange);
         }
 
-        return mapper.toSubscriptionResponse(subscription);
+        return response;
     }
 
     private User findUserById(Long userId) {
