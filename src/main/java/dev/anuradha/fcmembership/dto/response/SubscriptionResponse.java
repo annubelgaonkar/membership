@@ -5,16 +5,22 @@ import dev.anuradha.fcmembership.enums.SubscriptionStatus;
 import lombok.Builder;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Data
 @Builder
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class SubscriptionResponse {
+
     private Long subscriptionId;
     private Long userId;
     private String userName;
-    private PlanResponse plan;
+
+    private Long planId;
+    private String planName;
+    private BigDecimal planPrice;
+    //current tier only
     private TierResponse tier;
     private SubscriptionStatus status;
     private LocalDateTime startDate;

@@ -9,6 +9,7 @@ import dev.anuradha.fcmembership.entity.MembershipTier;
 import dev.anuradha.fcmembership.entity.User;
 import dev.anuradha.fcmembership.entity.UserSubscription;
 import dev.anuradha.fcmembership.enums.SubscriptionStatus;
+import dev.anuradha.fcmembership.enums.TierType;
 import dev.anuradha.fcmembership.exception.ResourceNotFoundException;
 import dev.anuradha.fcmembership.exception.SubscriptionException;
 import dev.anuradha.fcmembership.exception.TierMismatchException;
@@ -48,38 +49,46 @@ public class MembershipServiceImpl implements MembershipService{
 
     @Override
     @Transactional
-    public SubscriptionResponse subscribe(SubscribeRequest request){
+    public SubscriptionResponse subscribe(SubscribeRequest request) {
+
         User user = findUserById(request.getUserId());
         MembershipPlan plan = findPlanById(request.getPlanId());
-        MembershipTier tier = findTierById(request.getTierId());
 
-        if(!tier.getPlan().getId().equals(plan.getId())){
-            throw new TierMismatchException(
-                    "Tier '" + tier.getName() + "' does not belong to plan '" + plan.getName() + "'"
-            );
-        }
-
+        // Check if user already has an active subscription
         subscriptionRepository.findByUserIdAndStatusAndExpiryDateAfter(
                         user.getId(), SubscriptionStatus.ACTIVE, LocalDateTime.now()
                 )
                 .ifPresent(existing -> {
                     throw new SubscriptionException(
-                            "User already has an active subscription. Please cancel it before susbcribing to a new plan."
+                            "User already has an active subscription. Please cancel it before subscribing to a new plan."
                     );
                 });
+
+        // Auto-assign best qualifying tier via criteria engine
+        // If user doesn't qualify for any tier → default to Silver
+        MembershipTier assignedTier = tierEvaluationEngine
+                .evaluateBestTier(user, plan.getId())
+                .orElseGet(() -> tierRepository
+                        .findByPlanIdAndTierType(plan.getId(), TierType.SILVER)
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                "Default Silver tier not found for plan: " + plan.getName()
+                        ))
+                );
 
         LocalDateTime now = LocalDateTime.now();
         UserSubscription subscription = UserSubscription.builder()
                 .user(user)
                 .plan(plan)
-                .tier(tier)
+                .tier(assignedTier)
                 .status(SubscriptionStatus.ACTIVE)
                 .startDate(now)
                 .expiryDate(now.plusDays(plan.getDurationInDays()))
                 .build();
 
         UserSubscription saved = subscriptionRepository.save(subscription);
-        log.info("User {} subsribed to plan {} tier {}", user.getEmail(), plan.getName(), tier.getName());
+        log.info("User {} subscribed to plan {} — auto-assigned tier: {}",
+                user.getEmail(), plan.getName(), assignedTier.getName());
+
         return mapper.toSubscriptionResponse(saved);
     }
 

@@ -12,6 +12,4 @@ public class SubscribeRequest {
     @NotNull(message = "Plan id is required")
     private Long planId;
 
-    @NotNull(message = "Tier ID is required")
-    private Long tierId;
 }
